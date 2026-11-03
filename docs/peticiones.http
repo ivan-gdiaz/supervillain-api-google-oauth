@@ -1,0 +1,55 @@
+# REST Client (VS Code) o referencia para Postman.
+# Cambia baseUrl por la URL de Render para probar el despliegue.
+@baseUrl = http://localhost:3000
+@villainId = REEMPLAZA_CON_DATA_ID
+
+### 1. Salud pública -> 200
+GET {{baseUrl}}/health
+
+### 2. Registro público -> 201 (segunda vez, 409)
+POST {{baseUrl}}/api/users
+Content-Type: application/json
+
+{"username":"alumno","password":"PracticaJWT_2026!","email":"alumno@example.test"}
+
+### 3. Signin -> 200 y token (REST Client guarda la respuesta)
+# @name signin
+POST {{baseUrl}}/api/users/signin
+Content-Type: application/json
+
+{"username":"alumno","password":"PracticaJWT_2026!"}
+
+### 4. Perfil protegido -> 200; no hay password en la respuesta
+GET {{baseUrl}}/api/users/secure
+Authorization: Bearer {{signin.response.body.$.token}}
+
+### 5. Crear sin token -> 401
+POST {{baseUrl}}/api/villains
+Content-Type: application/json
+
+{"name":"Gru","alias":"El Ladrón de la Luna","evilLevel":8000}
+
+### 6. Crear con token -> 201; copia data._id en villainId
+POST {{baseUrl}}/api/villains
+Authorization: Bearer {{signin.response.body.$.token}}
+Content-Type: application/json
+
+{"name":"Gru","alias":"El Ladrón de la Luna","evilLevel":8000}
+
+### 7. Listado abierto -> 200 ANTES del ejercicio; 401 DESPUÉS
+GET {{baseUrl}}/api/villains
+
+### 8. Listado con token -> 200 antes y después del ejercicio
+GET {{baseUrl}}/api/villains
+Authorization: Bearer {{signin.response.body.$.token}}
+
+### 9. Token alterado -> 401
+GET {{baseUrl}}/api/users/secure
+Authorization: Bearer incorrecto
+
+### 10. Ruta anidada con token -> 200 si el villano existe
+GET {{baseUrl}}/api/villains/{{villainId}}/lairs
+Authorization: Bearer {{signin.response.body.$.token}}
+
+### 11. Mismo recurso sin token -> 401
+GET {{baseUrl}}/api/villains/{{villainId}}/lairs
