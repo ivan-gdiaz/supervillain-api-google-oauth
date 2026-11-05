@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: supervillain-api-jwt
+    name: supervillain-api-google-oauth
     runtime: node
     plan: free
     region: frankfurt

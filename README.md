@@ -2,7 +2,7 @@
 
 API docente de supervillanos, guaridas, esbirros y máquinas. **La identidad la comprueba Google** mediante OpenID Connect sobre OAuth 2.0. La API no recibe ni guarda contraseñas: después del acceso con Google devuelve un JWT propio, válido durante una hora, para usar los endpoints.
 
-Base: [supervillain-api-simplificada](https://github.com/ivan-gdiaz/supervillain-api-simplificada). Se mantienen el CRUD y los routers anidados. Esta es la versión 2; sustituye el registro y signin locales de la versión 1.
+Base: [supervillain-api-simplificada](https://github.com/ivan-gdiaz/supervillain-api-simplificada). Se mantienen el CRUD y los routers anidados. Este repositorio contiene la variante con Google. La versión con registro y contraseña se mantiene en [supervillain-api-jwt](https://github.com/ivan-gdiaz/supervillain-api-jwt).
 
 **Ejercicio pendiente:** `GET /api/villains` sigue abierto deliberadamente. El alumnado debe protegerlo con `tokenVerify`, según [el enunciado](docs/EJERCICIO.md). El inicio OAuth, su callback y `/health` deben continuar públicos.
 
@@ -11,8 +11,8 @@ Base: [supervillain-api-simplificada](https://github.com/ivan-gdiaz/supervillain
 Necesitas Node.js 24, MongoDB local o Atlas y un cliente OAuth de Google de tipo **Aplicación web**. Sigue [la configuración de Google y Render](docs/DESPLIEGUE.md).
 
 ```bash
-git clone https://github.com/ivan-gdiaz/supervillain-api-jwt.git
-cd supervillain-api-jwt
+git clone https://github.com/ivan-gdiaz/supervillain-api-google-oauth.git
+cd supervillain-api-google-oauth
 npm ci
 cp .env.example .env
 node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"

@@ -31,7 +31,7 @@ Colecciones nuevas: `oauth_users` (perfiles) y `oauth_login_attempts` (intentos 
 
 ## 3. Configurar Render
 
-Para un servicio nuevo: New → Blueprint, conecta GitHub y selecciona `ivan-gdiaz/supervillain-api-jwt`, rama `main`. Revisa `render.yaml` e introduce las variables que solicite.
+Para un servicio nuevo: New → Blueprint, conecta GitHub y selecciona `ivan-gdiaz/supervillain-api-google-oauth`, rama `main`. Crea un servicio distinto si quieres conservar también desplegada la versión con contraseña. Revisa `render.yaml` e introduce las variables que solicite.
 
 | Variable | Valor |
 |---|---|
