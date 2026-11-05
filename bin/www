@@ -26,11 +26,11 @@ var server = http.createServer(app);
  * Listen on provided port, on all network interfaces.
  */
 
-// Esperar a MongoDB y al índice único antes de aceptar registros.
+// Esperar a MongoDB y a los índices de identidad/estado OAuth.
 async function start() {
   if (!process.env.MONGODB_URI) throw new Error('Falta MONGODB_URI.');
   await mongoose.connect(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 15000 });
-  await require('../models/User').init();
+  await Promise.all([require('../models/User').init(), require('../models/OAuthAttempt').init()]);
   console.log('MongoDB Atlas DataBase connection successful');
   server.listen(port, '0.0.0.0');
 }

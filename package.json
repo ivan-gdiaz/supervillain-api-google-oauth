@@ -1,8 +1,8 @@
 {
   "name": "supervillain-api-jwt",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "VillainLair con autenticación JWT: ejemplo docente basado en moviesAppAuth",
+  "description": "VillainLair con Google OpenID Connect (OAuth 2.0) y JWT para la API",
   "engines": {
     "node": ">=24 <27"
   },
@@ -18,14 +18,14 @@
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
     "express": "^4.22.3",
+    "express-rate-limit": "^8.2.1",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.11.1",
     "morgan": "^1.12.1",
-    "bcryptjs": "^3.0.2",
-    "jsonwebtoken": "^9.0.2",
-    "express-rate-limit": "^8.2.1"
+    "openid-client": "^6.8.9"
   },
   "devDependencies": {
-    "supertest": "^7.3.1",
-    "mongodb-memory-server": "^10.2.3"
+    "mongodb-memory-server": "^10.2.3",
+    "supertest": "^7.3.1"
   }
 }

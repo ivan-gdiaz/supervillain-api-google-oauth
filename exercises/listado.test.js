@@ -14,11 +14,11 @@ test('el listado rechaza un token inválido', async () => {
   await request(app).get('/api/villains').set('Authorization', 'Bearer incorrecto').expect(401);
 });
 test('el listado rechaza un token caducado', async () => {
-  const expired = jwt.sign({ username: 'alumno', sub: jwt.decode(token).sub }, process.env.TOKEN_SECRET, { expiresIn: -1 });
+  const expired = jwt.sign({ provider: 'google', sub: jwt.decode(token).sub, iss: 'villainlair-api', aud: 'villainlair-client' }, process.env.TOKEN_SECRET, { expiresIn: -1 });
   await request(app).get('/api/villains').set('Authorization', `Bearer ${expired}`).expect(401);
 });
-test('un token válido permite listar; health y signin siguen públicos', async () => {
+test('un token válido permite listar; health y acceso con Google siguen disponibles', async () => {
   await request(app).get('/api/villains').set('Authorization', `Bearer ${token}`).expect(200);
   await request(app).get('/health').expect(200);
-  await request(app).post('/api/users/signin').send({ username: 'alumno', password: 'SoloPruebas_2026' }).expect(200);
+  await authenticate(app);
 });

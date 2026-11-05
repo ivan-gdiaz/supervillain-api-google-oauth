@@ -1,81 +1,96 @@
-# Despliegue en Render con MongoDB Atlas
+# Google Cloud + Render + MongoDB Atlas
 
-Se entrega el código de despliegue. Para crear un servicio real debes entrar en tus cuentas de Render y Atlas y aportar tu URI; no hay credenciales reales en el repositorio.
+El repositorio contiene el flujo OAuth completo. Necesitas configurar un cliente de Google propio; sus credenciales no se publican en GitHub.
 
-## 1. Preparar Atlas
+## 1. Crear el cliente en Google
 
-1. Crea o reutiliza un clúster de prácticas. Crea un usuario de base de datos con `readWrite` sobre `villainlair`.
-2. En Connect → Drivers copia la URI e incluye `/villainlair` antes de `?`. Codifica caracteres especiales de la contraseña (por ejemplo, `@` → `%40`).
-3. Autoriza tu IP local para las pruebas. Para Render, añade sus rangos de salida al terminar el paso siguiente.
-4. El usuario de Atlas permite a la API conectarse a MongoDB. Los usuarios creados en `/api/users` son cuentas distintas, almacenadas en la colección `users`.
+1. Abre [Google Cloud Console](https://console.cloud.google.com/) y selecciona o crea un proyecto.
+2. En **Google Auth Platform**, configura Branding (nombre de la app, correo de soporte y contacto) y Audience. Para cuentas personales o distintas organizaciones, utiliza External. Si mantienes Testing, añade las cuentas de prueba que usarán la práctica.
+3. En Data Access comprueba los scopes básicos de identidad: `openid`, `email` y `profile`. No se solicita Gmail ni Drive.
+4. En Clients, crea un cliente OAuth de tipo **Web application / Aplicación web**.
+5. Añade las URI de redirección autorizadas que vayas a utilizar, exactamente:
 
-## 2. Crear un Blueprint de Render
-
-1. Abre el panel de Render → New → Blueprint y conecta tu cuenta de GitHub.
-2. Selecciona `ivan-gdiaz/supervillain-api-jwt`, rama `main`.
-3. Revisa el servicio y el plan Free definidos en `render.yaml`.
-4. Introduce `MONGODB_URI` cuando lo solicite. Render generará `TOKEN_SECRET` mediante `generateValue: true`.
-5. Crea el Blueprint. En el servicio, Connect → Outbound, copia los rangos de salida y añádelos en Atlas → Network Access. Espera a que estén activos y reintenta el despliegue si había fallado.
-
-No publiques ni copies la clave JWT en el código o en peticiones del cliente. Si configuras el servicio manualmente, genera una clave aleatoria de al menos 32 bytes:
-
-```bash
-node -e "console.log(require('node:crypto').randomBytes(48).toString('hex'))"
+```text
+http://localhost:3000/api/auth/google/callback
+https://TU-SERVICIO.onrender.com/api/auth/google/callback
 ```
 
-## Alternativa: Web Service manual
+La segunda es un marcador: sustituye el dominio por el que realmente asigne Render. No añadas barra final. No hace falta un origen JavaScript autorizado porque usamos redirección de servidor, sin SDK de Google en el navegador.
 
-Conecta GitHub mediante Git Provider para los despliegues automáticos, selecciona el repositorio y configura:
+6. Guarda el Client ID y el Client secret en `.env` local y en Environment de Render. No compartas el secreto ni lo introduzcas en el frontend.
 
-| Campo | Valor |
+La API comprueba la identidad con OpenID Connect (OAuth 2.0, Authorization Code y PKCE). Nunca introduces la contraseña de Google en la API.
+
+## 2. Preparar Atlas
+
+Crea o reutiliza una base `villainlair` de prácticas. El usuario de base de datos necesita `readWrite` sobre ella. Autoriza tu IP local para trabajar en desarrollo y los rangos de salida del servicio Render para el despliegue.
+
+Copia la URI desde Connect → Drivers, incluyendo `/villainlair` antes de `?`. Codifica los caracteres especiales de la contraseña de Atlas. Esta credencial de base de datos es independiente del cliente OAuth y de las cuentas que entran con Google.
+
+Colecciones nuevas: `oauth_users` (perfiles) y `oauth_login_attempts` (intentos temporales con TTL). Las colecciones de negocio siguen siendo las mismas.
+
+## 3. Configurar Render
+
+Para un servicio nuevo: New → Blueprint, conecta GitHub y selecciona `ivan-gdiaz/supervillain-api-jwt`, rama `main`. Revisa `render.yaml` e introduce las variables que solicite.
+
+| Variable | Valor |
 |---|---|
-| Runtime | Node |
-| Branch | main |
-| Root Directory | Vacío |
-| Build Command | `npm ci --omit=dev` |
-| Start Command | `npm start` |
-| Health Check Path | `/health` |
-| Auto-Deploy | On Commit |
-| NODE_VERSION | `24.x` |
-| NODE_ENV | `production` |
-| MONGODB_URI | Tu URI de Atlas |
-| TOKEN_SECRET | Clave aleatoria; mínimo 32 bytes |
+| `NODE_VERSION` | `24.x` |
+| `NODE_ENV` | `production` |
+| `MONGODB_URI` | URI real de Atlas |
+| `TOKEN_SECRET` | Clave JWT aleatoria; Blueprint la genera en un servicio nuevo |
+| `GOOGLE_CLIENT_ID` | ID del cliente de Aplicación web |
+| `GOOGLE_CLIENT_SECRET` | Secreto de ese mismo cliente |
+| `GOOGLE_REDIRECT_URI` | Callback HTTPS exacto del servicio |
 
-Render asigna `PORT` y termina HTTPS. El proceso escucha en `0.0.0.0`. `npm start` no carga `.env`; las variables se toman de Environment. `RENDER=true`, proporcionada por Render, activa la confianza en un salto de proxy para el limitador de peticiones.
+En un servicio o Blueprint ya existente, añade manualmente las tres variables `GOOGLE_*` en Environment antes del nuevo despliegue. Los secretos marcados `sync: false` no se actualizan automáticamente al sincronizar el YAML. El arranque falla si faltan estas variables o el callback no es válido.
 
-## 3. Verificar la URL publicada
+Si aún desconoces el dominio asignado, crea/configura el servicio, consulta su URL y completa el callback tanto en Google como en Render antes de reintentar el despliegue.
 
-Cambia `BASE` por la URL que realmente te asigne Render (el nombre puede variar):
+Alternativa Web Service manual: Node, `npm ci --omit=dev` como build, `npm start` como inicio, `/health` como Health Check Path, rama `main`, Auto-Deploy On Commit. Render asigna `PORT`. El proceso escucha en `0.0.0.0` después de conectar a MongoDB e inicializar los índices. No subas un `.env`.
+
+En Render → Connect → Outbound copia los rangos de salida y autorízalos en Atlas → Network Access. Espera a que estén activos.
+
+## 4. Prueba real
+
+1. Abre `https://TU-SERVICIO.onrender.com/health`: debe devolver 200.
+2. Abre **en el navegador** `https://TU-SERVICIO.onrender.com/api/auth/google`.
+3. Elige una cuenta permitida en Google y acepta el consentimiento.
+4. El callback devolverá JSON con `token`, `tokenType`, `expiresIn` y `user`.
+5. Copia `token` y prueba:
 
 ```bash
 BASE=https://TU-SERVICIO.onrender.com
-curl -i "$BASE/health"                 # 200 y {"status":"ok"}
-curl -i "$BASE/api/users/secure"       # 401 sin JWT
-curl -i -X POST "$BASE/api/villains"    # 401 sin JWT
-curl -i "$BASE/api/villains"           # 200: ejercicio aún pendiente
+TOKEN='PEGA_EL_JWT_DE_LA_API'
+curl -i "$BASE/api/users/secure" -H "Authorization: Bearer $TOKEN"
+# 200
+curl -i "$BASE/api/users/secure"
+# 401
+curl -i "$BASE/api/villains"
+# 200 hasta que el alumnado complete el ejercicio
 ```
 
-Después reproduce registro → signin → petición con Bearer del README contra esta misma BASE. Comprueba que el token recibido no sea una cadena vacía y que la creación autenticada de villano devuelve 201.
+El token que admite la API es el que devuelve su callback, no un access token obtenido de otro servicio ni el ID token de Google. No pegues tokens activos en páginas públicas.
 
-El endpoint `/health` no exige token y pasa a 503 cuando MongoDB no está disponible. Si el arranque falla antes de escuchar, consulta los logs; revisa URI, permisos, IP y `TOKEN_SECRET`. No uses un endpoint protegido como comprobación de salud.
+## 5. Cambio desde usuario/contraseña
 
-## 4. Actualizaciones y datos
+`POST /api/users` y `POST /api/users/signin` devuelven 404. Cada usuario entra por Google y obtiene un perfil nuevo en `oauth_users`. No se vinculan cuentas por email. La antigua colección `users` se conserva sin usar; el despliegue no borra sus datos ni sus hashes. Los JWT antiguos se rechazan. No necesitas recrear villanos, guaridas, esbirros o máquinas.
 
-Un push a `main` provoca otro despliegue. `autoDeployTrigger: commit` no espera a GitHub Actions: revisa el resultado de las pruebas; puedes cambiar en Render a despliegue tras checks si tu configuración lo permite. La versión publicada se comprueba en Deploys. Los datos persisten en Atlas.
+`npm run seed` sigue siendo opcional y local; nunca se ejecuta en el build. La opción `--force` reemplaza los datos de negocio y debe usarse solo si deseas borrarlos.
 
-La carga opcional `npm run seed` se ejecuta desde tu ordenador, con `.env` configurado y tu IP autorizada. **No se ejecuta durante el build.** `--force` elimina y repuebla los datos de negocio: no lo uses para conservarlos. No crea ni elimina usuarios.
+## Problemas frecuentes
 
-## 5. Fallos habituales
-
-| Síntoma | Comprobación |
+| Síntoma | Revisar |
 |---|---|
-| Fallo por TOKEN_SECRET | Falta la clave, es demasiado corta o contiene un marcador |
-| No conecta con MongoDB | URI, usuario, contraseña codificada y rangos de salida |
-| 401 en una ruta protegida | `Authorization: Bearer TOKEN`, firma y caducidad |
-| 409 al registrar | Username ya existe, también ignorando mayúsculas |
-| 429 al entrar o registrarse | Límite compartido de 30 peticiones/15 min/IP |
-| Health no pasa | Ruta `/health`, conexión a Atlas y logs de arranque |
-| Primera petición lenta | El servicio Free puede estar reactivándose |
-| Tras rotar la clave falla un token | Vuelve a hacer signin; los tokens previos ya no valen |
+| `redirect_uri_mismatch` en Google | Coincidencia exacta de protocolo, dominio, puerto y ruta en Google y `GOOGLE_REDIRECT_URI` |
+| Google no permite a una cuenta entrar | Audience, usuarios de prueba, políticas de tu organización y estado de publicación |
+| Fallo al arrancar | Variables `GOOGLE_*`, `TOKEN_SECRET`, URI e IP de Atlas |
+| Callback 400 | Entrar primero por `/api/auth/google`, mismo navegador, cookie habilitada y menos de diez minutos; no recargar un callback ya usado |
+| Callback 401 | Consentimiento denegado, código no válido o error al validar el ID token; inicia el flujo otra vez |
+| Inicio 502 | Acceso a Google/discovery y configuración del cliente |
+| Perfil o CRUD 401 | JWT propio completo, Bearer y caducidad; no usar el JWT antiguo |
+| 429 | Límite de intentos OAuth; esperar 15 minutos |
 
-Documentación: [Express en Render](https://render.com/docs/deploy-node-express-app), [Blueprint YAML](https://render.com/docs/blueprint-spec), [IP de salida](https://render.com/docs/outbound-ip-addresses), [acceso de red de Atlas](https://www.mongodb.com/docs/atlas/security/ip-access-list/).
+La aplicación usa cookies Secure con HTTPS y HTTP solo para localhost en desarrollo. El servicio Free puede reactivarse con retraso. Un push a `main` despliega automáticamente; esta configuración no espera a GitHub Actions.
+
+Fuentes: [Google OIDC](https://developers.google.com/identity/openid-connect/openid-connect), [configuración de consentimiento](https://developers.google.com/workspace/guides/configure-oauth-consent), [Render Blueprint](https://render.com/docs/blueprint-spec), [rangos de salida](https://render.com/docs/outbound-ip-addresses).
